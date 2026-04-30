@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>중고차 마켓 MVP</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f4f8fa; }
+    .navbar { background: #21295C !important; }
+    .card-car { transition: transform .15s; }
+    .card-car:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,.08); }
+    .price { color: #065A82; font-weight: 700; }
+    .badge-status { font-size: .75rem; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark px-4">
+  <span class="navbar-brand mb-0 h4">🚗 중고차 마켓 MVP</span>
+  <div>
+    <button class="btn btn-light btn-sm me-2" onclick="showRegister()">+ 매물 등록</button>
+    <span id="health" class="badge bg-secondary">checking…</span>
+  </div>
+</nav>
+
+<div class="container my-4">
+  <div class="row g-2 mb-3 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label small">브랜드</label>
+      <select id="filterBrand" class="form-select form-select-sm">
+        <option value="">전체</option>
+        <option>현대</option><option>기아</option><option>제네시스</option>
+        <option>BMW</option><option>벤츠</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label small">최대 가격(원)</label>
+      <input id="filterPrice" type="number" class="form-control form-control-sm" placeholder="예: 30000000">
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-primary btn-sm w-100" onclick="loadCars()">검색</button>
+    </div>
+    <div class="col-md-4 text-end">
+      <small class="text-muted" id="count"></small>
+    </div>
+  </div>
+
+  <div id="cars" class="row g-3"></div>
+</div>
+
+<!-- 등록 모달 -->
+<div class="modal fade" id="regModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white"><h5 class="modal-title">매물 등록</h5></div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label">판매자</label>
+            <select id="r_seller" class="form-select"></select></div>
+          <div class="col-6"><label class="form-label">브랜드</label>
+            <input id="r_brand" class="form-control" placeholder="현대"></div>
+          <div class="col-6"><label class="form-label">모델</label>
+            <input id="r_model" class="form-control"></div>
+          <div class="col-3"><label class="form-label">연식</label>
+            <input id="r_year" type="number" class="form-control" value="2022"></div>
+          <div class="col-3"><label class="form-label">연료</label>
+            <input id="r_fuel" class="form-control" placeholder="가솔린"></div>
+          <div class="col-6"><label class="form-label">가격(원)</label>
+            <input id="r_price" type="number" class="form-control"></div>
+          <div class="col-6"><label class="form-label">주행(km)</label>
+            <input id="r_mile" type="number" class="form-control"></div>
+          <div class="col-12"><label class="form-label">설명</label>
+            <textarea id="r_desc" rows="2" class="form-control"></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+        <button class="btn btn-primary" onclick="submitCar()">등록</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 문의 모달 -->
+<div class="modal fade" id="inqModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white"><h5 class="modal-title">문의하기</h5></div>
+      <div class="modal-body">
+        <p class="text-muted small mb-2">차량 ID: <span id="inq_car_id"></span></p>
+        <label class="form-label">구매자</label>
+        <select id="inq_buyer" class="form-select mb-2"></select>
+        <label class="form-label">메시지</label>
+        <textarea id="inq_msg" class="form-control" rows="3"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+        <button class="btn btn-info text-white" onclick="submitInquiry()">전송</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let users = [];
+
+async function checkHealth() {
+  try {
+    const r = await fetch('/health');
+    const j = await r.json();
+    document.getElementById('health').className = 'badge ' + (j.status === 'ok' ? 'bg-success' : 'bg-danger');
+    document.getElementById('health').textContent = 'DB ' + j.status;
+  } catch (e) {
+    document.getElementById('health').className = 'badge bg-danger';
+    document.getElementById('health').textContent = 'DB error';
+  }
+}
+
+async function loadUsers() {
+  const r = await fetch('/api/users');
+  users = await r.json();
+  const sellerSel = document.getElementById('r_seller');
+  const buyerSel  = document.getElementById('inq_buyer');
+  sellerSel.innerHTML = users.filter(u => u.type !== 'buyer')
+    .map(u => '<option value="' + u.id + '">' + u.name + ' (' + u.email + ')</option>').join('');
+  buyerSel.innerHTML  = users.filter(u => u.type !== 'seller')
+    .map(u => '<option value="' + u.id + '">' + u.name + '</option>').join('');
+}
+
+async function loadCars() {
+  const brand = document.getElementById('filterBrand').value;
+  const price = document.getElementById('filterPrice').value;
+  const params = new URLSearchParams();
+  if (brand) params.append('brand', brand);
+  if (price) params.append('max_price', price);
+  const r = await fetch('/api/cars?' + params);
+  const cars = await r.json();
+  document.getElementById('count').textContent = '검색 결과: ' + cars.length + '건';
+  document.getElementById('cars').innerHTML = cars.map(function(c) {
+    return '' +
+      '<div class="col-md-6 col-lg-4">' +
+        '<div class="card card-car h-100"><div class="card-body">' +
+          '<div class="d-flex justify-content-between">' +
+            '<h5 class="card-title mb-0">' + c.brand + ' ' + c.model + '</h5>' +
+            '<span class="badge bg-success badge-status">' + c.status + '</span>' +
+          '</div>' +
+          '<p class="text-muted small mt-1">' + c.year + '년식 · ' + c.mileage.toLocaleString() + 'km · ' + (c.fuel || '-') + '</p>' +
+          '<p class="price h5 mb-2">' + c.price.toLocaleString() + ' 원</p>' +
+          '<p class="small mb-2">' + (c.desc || '') + '</p>' +
+          '<p class="small text-muted mb-2">판매자: ' + c.seller + '</p>' +
+          '<button class="btn btn-sm btn-outline-info" onclick="openInquiry(' + c.id + ')">문의하기</button>' +
+        '</div></div>' +
+      '</div>';
+  }).join('');
+}
+
+function showRegister() {
+  new bootstrap.Modal(document.getElementById('regModal')).show();
+}
+
+async function submitCar() {
+  const body = {
+    seller_id: parseInt(document.getElementById('r_seller').value),
+    brand:   document.getElementById('r_brand').value.trim(),
+    model:   document.getElementById('r_model').value.trim(),
+    year:    parseInt(document.getElementById('r_year').value),
+    price:   parseInt(document.getElementById('r_price').value),
+    mileage: parseInt(document.getElementById('r_mile').value),
+    fuel:    document.getElementById('r_fuel').value.trim(),
+    desc:    document.getElementById('r_desc').value.trim(),
+  };
+  const r = await fetch('/api/cars', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (r.ok) {
+    alert('등록 완료!');
+    bootstrap.Modal.getInstance(document.getElementById('regModal')).hide();
+    loadCars();
+  } else {
+    alert('실패: ' + (await r.text()));
+  }
+}
+
+function openInquiry(carId) {
+  document.getElementById('inq_car_id').textContent = carId;
+  document.getElementById('inq_msg').value = '';
+  new bootstrap.Modal(document.getElementById('inqModal')).show();
+}
+
+async function submitInquiry() {
+  const body = {
+    car_id:   parseInt(document.getElementById('inq_car_id').textContent),
+    buyer_id: parseInt(document.getElementById('inq_buyer').value),
+    message:  document.getElementById('inq_msg').value.trim(),
+  };
+  if (!body.message) { alert('메시지를 입력하세요'); return; }
+  const r = await fetch('/api/inquiries', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (r.ok) {
+    alert('문의 전송 완료!');
+    bootstrap.Modal.getInstance(document.getElementById('inqModal')).hide();
+  } else {
+    alert('실패: ' + (await r.text()));
+  }
+}
+
+checkHealth();
+loadUsers();
+loadCars();
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+[Unit]
+Description=CarMarket Flask App
+After=network.target mssql-server.service
+Requires=mssql-server.service
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/home/azureuser/sqlvm_usedcar/app
+EnvironmentFile=/home/azureuser/sqlvm_usedcar/app/.env
+ExecStart=/home/azureuser/sqlvm_usedcar/app/venv/bin/gunicorn \
+  --bind 0.0.0.0:5000 \
+  --workers 2 \
+  --access-logfile - \
+  --error-logfile - \
+  app:app
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
