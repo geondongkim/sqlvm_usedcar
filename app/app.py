@@ -23,8 +23,8 @@ app = Flask(__name__)
 
 DB_SERVER = os.environ.get("DB_SERVER", "localhost")
 DB_NAME = os.environ.get("DB_NAME", "CarMarket")
-DB_USER = "sa"
-DB_PASSWORD = os.environ.get("SA_PASSWORD")
+DB_USER = os.environ.get("DB_USER", "sa")
+DB_PASSWORD = os.environ.get("SA_PASSWORD") or os.environ.get("DB_PASSWORD")
 FLASK_PORT = int(os.environ.get("FLASK_PORT", 5000))
 
 CONN_STR = (
@@ -33,6 +33,14 @@ CONN_STR = (
     f"UID={DB_USER};PWD={DB_PASSWORD};"
     "TrustServerCertificate=yes;Encrypt=yes;"
 )
+
+
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @contextmanager

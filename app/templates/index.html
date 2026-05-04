@@ -108,7 +108,7 @@ let users = [];
 
 async function checkHealth() {
   try {
-    const r = await fetch('/health');
+    const r = await fetch('/health', { cache: 'no-store' });
     const j = await r.json();
     document.getElementById('health').className = 'badge ' + (j.status === 'ok' ? 'bg-success' : 'bg-danger');
     document.getElementById('health').textContent = 'DB ' + j.status;
@@ -119,7 +119,7 @@ async function checkHealth() {
 }
 
 async function loadUsers() {
-  const r = await fetch('/api/users');
+  const r = await fetch('/api/users?_=' + Date.now(), { cache: 'no-store' });
   users = await r.json();
   const sellerSel = document.getElementById('r_seller');
   const buyerSel  = document.getElementById('inq_buyer');
@@ -135,7 +135,8 @@ async function loadCars() {
   const params = new URLSearchParams();
   if (brand) params.append('brand', brand);
   if (price) params.append('max_price', price);
-  const r = await fetch('/api/cars?' + params);
+  params.append('_', Date.now());
+  const r = await fetch('/api/cars?' + params.toString(), { cache: 'no-store' });
   const cars = await r.json();
   document.getElementById('count').textContent = '검색 결과: ' + cars.length + '건';
   document.getElementById('cars').innerHTML = cars.map(function(c) {
