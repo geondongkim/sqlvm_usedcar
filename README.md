@@ -151,7 +151,7 @@ echo $PUBIP
 ssh azureuser@$PUBIP
 
 # VM 내부에서:
-git clone https://github.com/jhjwlee/sqlvm_usedcar.git
+git clone https://github.com/geondongkim/sqlvm_usedcar.git
 cd sqlvm_usedcar
 
 # SQL Server 설치 (대화형 — SA 비밀번호 입력 필요)
